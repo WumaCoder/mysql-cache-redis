@@ -1,5 +1,5 @@
 {
-  "name": "mysql-cache",
+  "name": "mysql-cache-redis",
   "version": "0.0.1",
   "description": "A nodejs mysql caching framework based on redis",
   "main": "index.js",

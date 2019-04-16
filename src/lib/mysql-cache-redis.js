@@ -17,7 +17,7 @@ let client = {};
  * @param {Object} options 选项
  * @returns {Object} {pool,client} pool数据库连接 client redis连接对象
  */
-function createPool(mysqlConfig = { host: 'localhost', port: 3306, database: "", username: 'root', password: '12345678' }, redisConfig = { host: 'localhost', port: 6379 }, options = { cacheTime: 60 * 60 * 1, limitConnect: 10 }) {
+function createPool(mysqlConfig = { host: 'localhost', port: 3306, database: "", username: 'root', password: '12345678', connectionLimit:10}, redisConfig = { host: 'localhost', port: 6379 }, options = { cacheTime: 60 * 60 * 1}) {
     pool = mysql.createPool(mysqlConfig);
     client = redis.createClient(redisConfig);
     client.on('error', (err) => {
@@ -40,7 +40,7 @@ function release() {
  * @param {Boolean||Function} isAutoReleaseOrCallback 是否自动退出池或者回调函数
  * @param {Function} callback(err,data) 回调 err是否错误，data数据库数据
  */
-async function sqlQuery(sql, value = [], isAutoReleaseOrCallback = true, callback = (err, data) => { }) {
+async function query(sql, value = [], isAutoReleaseOrCallback = true, callback = (err, data) => { }) {
     try {
 
         if (typeof isAutoReleaseOrCallback == 'function') {//检查isAotuRelease是否为函数
@@ -121,4 +121,4 @@ async function sqlQuery(sql, value = [], isAutoReleaseOrCallback = true, callbac
     }
 }
 
-module.exports = { createPool, release, sqlQuery };
+module.exports = { createPool, release, query };
