@@ -1,0 +1,22 @@
+{
+  "name": "mysql-cache",
+  "version": "0.0.1",
+  "description": "A nodejs mysql caching framework based on redis",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "redis",
+    "mysql",
+    "express"
+  ],
+  "author": "mark",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.16.4",
+    "express-api-routing": "0.0.2",
+    "mysql": "^2.16.0",
+    "redis": "^2.8.0"
+  }
+}
