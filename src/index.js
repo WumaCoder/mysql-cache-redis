@@ -1,1 +1,1 @@
-module.exports = require("./lib/mysql-cache");
+module.exports = require("./lib/mysql-cache-redis");

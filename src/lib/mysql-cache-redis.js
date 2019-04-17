@@ -6,8 +6,6 @@ let option = {};
 //全局配置
 let pool = {};
 //数据库对象
-let conn = {};
-//当前连接对象
 let client = {};
 //Redis连接对象
 /**
@@ -28,24 +26,19 @@ function createPool(mysqlConfig = { host: 'localhost', port: 3306, database: "",
     return { pool, client };
 }
 
-function release() {
-    //使用这个撤销连接池可能会出错
-    conn.release();
-}
-
 /**
  * 
  * @param {String} sql sql语句
  * @param {Array} value 传值
- * @param {Boolean||Function} isAutoReleaseOrCallback 是否自动退出池或者回调函数
+ * @param {Boolean||Function} isAutoRelease 是否自动退出池或者回调函数
  * @param {Function} callback(err,data) 回调 err是否错误，data数据库数据
  */
-async function query(sql, value = [], isAutoReleaseOrCallback = true, callback = (err, data) => { }) {
+async function query(sql, value = [], callback = (err, data) => { },isAutoRelease = true,isCache = true) {
     try {
 
-        if (typeof isAutoReleaseOrCallback == 'function') {//检查isAotuRelease是否为函数
-            callback = isAutoReleaseOrCallback;
-            isAutoReleaseOrCallback = true;
+        if (typeof callback == 'boolean') {//检查isAotuRelease是否为函数
+            isCache = isAutoRelease;
+            isAutoRelease = callback;
         }
 
         let sqlArr = sqlObj.parser(sql);//解析sql语句
@@ -53,11 +46,11 @@ async function query(sql, value = [], isAutoReleaseOrCallback = true, callback =
         let sqlStr = JSON.stringify(sqlArr);//转换sql
         let data = null;//sql查询的值
 
-        if (sqlArr[0] == 'SELECT') {
+        if (sqlArr[0] == 'SELECT' && isCache) {
             data = await new Promise((resolve, reject) => {//获取缓存数据
                 client.exists(sqlStr, (err, data) => {
                     if (err) {
-                        console.log(err);
+                        console.error(err);
                         reject("client错误");
                     } else {
                         if (data) {//表示缓存存在
@@ -74,11 +67,12 @@ async function query(sql, value = [], isAutoReleaseOrCallback = true, callback =
             });
 
         }
+
         if (!data) {//如果缓存不存在则进行查询缓存
             let connection = await new Promise((resolve, reject) => {//获取连接
                 pool.getConnection((err, connection) => {
                     if (err) {
-                        console.log(err);
+                        console.error(err);
                         reject("数据库错误");
                     } else {
                         resolve(connection);
@@ -90,8 +84,11 @@ async function query(sql, value = [], isAutoReleaseOrCallback = true, callback =
 
             data = await new Promise((resolve, reject) => {//sql语句执行
                 connection.query(sql, value, (err, data) => {
+                    if (isAutoRelease) {//检查是否释放连接
+                        connection.release();//返回池
+                    }
                     if (err) {
-                        console.log(err);
+                        console.error(err);
                         reject("查询错误");
                     } else {
                         resolve(data);
@@ -99,26 +96,23 @@ async function query(sql, value = [], isAutoReleaseOrCallback = true, callback =
                 });
             });
 
-            if (isAutoReleaseOrCallback) {
-                connection.release();//返回池
-            }
-
-            if (data.length && sqlArr[0] == 'SELECT') {
+            if (data.length && sqlArr[0] == 'SELECT' && isCache) {//如果数据为空则不缓存，如果不是SELECT也不缓存
                 client.set(sqlStr, JSON.stringify(data));//数据缓存
                 client.expire(sqlStr, option.cacheTime);//缓存时间1小时
             }
         }
-
-        callback(null, data);
+        if (typeof callback == 'function') {
+            callback(null, data);
+        }
+        
         return data;
     } catch (error) {
-        console.log(error);
-        if (isAutoReleaseOrCallback) {
-            connection.release();
+        console.error(error);
+        if (typeof callback == 'function') {
+            callback(null, data);
         }
-        callback(error, null);
         return error;
     }
 }
 
-module.exports = { createPool, release, query };
+module.exports = { createPool,  query };

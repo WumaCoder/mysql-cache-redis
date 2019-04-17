@@ -62,8 +62,9 @@ mysqlCacheRedis.query(sql,(err,data)=>{
     }else{
         data;//数据库查询的数据
     }
-});
+},true,true);//第一个true表示自动释放（默认），第二个true表示是否缓存
 
+//第二种方法
 (async function(){
     try{
         let data = await mysqlCacheRedis.query(sql);
