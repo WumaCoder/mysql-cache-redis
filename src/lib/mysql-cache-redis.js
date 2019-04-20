@@ -1,6 +1,7 @@
 const sqlAnalysis = require('./sql-analysis');
 const redisEnca = require('./redis-enca');
 
+
 let option = {};
 //全局配置
 let mysql = {};
