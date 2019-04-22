@@ -28,20 +28,22 @@ function getCache(key, delayTime = options.delayTime) {
                 reject("client错误");
             } else {
                 if (value) {//表示缓存存在
-                    client.expire(key, delayTime);//设置缓存时间
+                    if (delayTime) {
+                        client.expire(key, delayTime);//设置缓存时间
+                    }
                     client.get(key, (err, value) => {
                         //获取缓存 
                         if (err) {
                             console.error(err);
                             reject("数据获取失败");
                         } else {
-                            if (typeof json == 'object') {
-                                resolve(JSON.parse(value));//json转换
-                            } else if (typeof json == 'array') {
-                                resolve(JSON.parse(value));//json转换
-                            } else {
-                                resolve(value);//原数据
+                            let data;
+                            try {
+                                data = JSON.parse(value);
+                            } catch (error) {
+                                data = value;
                             }
+                            resolve(data);
                         }
                     });
                 } else {
@@ -59,6 +61,7 @@ function getCache(key, delayTime = options.delayTime) {
  * @param {Number} cacheTime 过期时间（s）
  */
 function setCache(key, value, cacheTime = options.cacheTime) {
+    
     if (value) {//如果数据为空则不缓存
         if (typeof value == 'object') {
             client.set(key, JSON.stringify(value));//数据缓存
@@ -67,9 +70,15 @@ function setCache(key, value, cacheTime = options.cacheTime) {
         } else {
             client.set(key, value);//数据缓存
         }
-
-        client.expire(key, cacheTime);//缓存时间
+        if (cacheTime) {
+            client.expire(key, cacheTime);//缓存时间
+        }
     }
 }
 
-module.exports = { getCache, setCache, bind }
+function flushdb(select=0) {
+    client.select(select);
+    client.flushdb();
+}
+
+module.exports = { getCache, setCache, bind, flushdb }

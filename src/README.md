@@ -7,6 +7,7 @@
     据，如果数据发送变化redis会清空变化的表的缓存。
 
 ## 使用他你需要准备什么？
+- 必须会使用mysql
 - 必须安装启动redis
 - 必须会nodejs
 - 必须会sql语句
@@ -23,7 +24,9 @@ npm i mysql-cache-redis -S
 
 ```js
 
-const mysqlCacheRedis = require('mysql-cache-redis');
+const mcr = require('mysql-cache-redis');
+const mysql = require('mysql');
+const redis = require('redis');
 //引入包
 const mysqlConfig = {//mysql配置
     host:'localhost',//主机地址
@@ -41,37 +44,47 @@ const redisConfig = {//redis配置
     //... 可以使用redis包的其他配置配置
 };
 
-const options = {
-    cacheTime: 60 * 60 * 1//缓存的生存时间默认1小时，秒为单位
-};
+let pool = mysql.createPool(mysqlConfig);
+let client = redis.createClient(redisConfig);
 
-mysqlCacheRedis.createPool(mysqlConfig,redisConfig,options);
-//创建池连接
+const mcroptions = {
+    cacheTime: 60 * 60,//缓存时间 -1表示全局不缓存，0表示没有缓存时间
+    delayTime: 60 * 30,//下次访问延迟多少秒 -1表示全局不延迟 0表示永不过期
+    isRelease: false//是否自动释放默认 不自动释放连接
+};
+//mysql-cache-reids 的全局配置
+
+mcr.bind(pool,client,mcroptions);
+//绑定对象
+
+global.mcr = mcr;
+//全局化mcr
 
 ```
 ### 使用
 
+#### 查看状态
 ```js
-//不用担心连接释放问题，他会自动释放
-//sql执行方法一
-const sql = 'select * from test;';
 
-mysqlCacheRedis.query(sql,(err,data)=>{
-    if(err){
-        console.log(err);
-    }else{
-        data;//数据库查询的数据
-    }
-},true,true);//第一个true表示自动释放（默认），第二个true表示是否缓存
-
-//第二种方法
-(async function(){
-    try{
-        let data = await mysqlCacheRedis.query(sql);
-        data;//获取的数据
-    }catch(err){
-        console.log(err);
-    }
-})();
+    mrc.status(true);//查看并打印true表示打印
 
 ```
+
+#### 执行sql语句
+```js
+
+    (async ()=>{
+        try{
+            let connect = mcr.connect();
+            let data = await connect.query(`SELECT * FROM TABLE WHERE ID=?;`,[12]);
+            connect.release();
+        }catch(err){
+            
+        }
+    })();
+
+```
+
+### 版本说明
+####0.0.5
+    记录版本信息，优化代码，实现基础操作
